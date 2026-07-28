@@ -9,9 +9,9 @@ app.use(express.json());
 
 try {
 	GlobalFonts.registerFromPath(path.join(__dirname, 'Montserrat-Black.ttf'), 'Montserrat');
-	console.log('Font registered successfully');
+	console.log('Montserrat registered successfully');
 } catch (err) {
-	console.error('FONT REGISTRATION FAILED:', err);
+	console.error('FONT REGISTRATION FAILED (Montserrat):', err);
 }
 
 const WIDTH = 2048;
@@ -121,81 +121,87 @@ async function drawAvatarCircle(ctx, imgUrl, cx, cy, ringColor) {
 	ctx.restore();
 }
 
-// Draws the current Robux icon: a faceted gem (rounded octagon split into
-// triangular facets, each shaded a bit lighter/darker than the base color
-// to fake a 3D beveled coin), instead of a flat shape with a punched hole.
+// Draws the actual Robux logo as vector shapes: an outer hexagon, a rounded
+// square ring inset inside it, and a solid square hole in the middle.
+// This matches Roblox's real mark and needs no external/proprietary font.
+function hexPoints(cx, cy, r, rotationOffset = -Math.PI / 2) {
+	const pts = [];
+	for (let i = 0; i < 6; i++) {
+		const angle = rotationOffset + (Math.PI * 2 / 6) * i;
+		pts.push([cx + r * Math.cos(angle), cy + r * Math.sin(angle)]);
+	}
+	return pts;
+}
+
+function hexPath(cx, cy, r, rotationOffset = -Math.PI / 2) {
+	const pts = hexPoints(cx, cy, r, rotationOffset);
+	const p = new Path2D();
+	pts.forEach(([x, y], i) => {
+		if (i === 0) p.moveTo(x, y);
+		else p.lineTo(x, y);
+	});
+	p.closePath();
+	return p;
+}
+
+function roundedRectPath(cx, cy, w, h, radius) {
+	const x = cx - w / 2;
+	const y = cy - h / 2;
+	const p = new Path2D();
+	p.moveTo(x + radius, y);
+	p.lineTo(x + w - radius, y);
+	p.arcTo(x + w, y, x + w, y + radius, radius);
+	p.lineTo(x + w, y + h - radius);
+	p.arcTo(x + w, y + h, x + w - radius, y + h, radius);
+	p.lineTo(x + radius, y + h);
+	p.arcTo(x, y + h, x, y + h - radius, radius);
+	p.lineTo(x, y + radius);
+	p.arcTo(x, y, x + radius, y, radius);
+	p.closePath();
+	return p;
+}
+
 function drawRobuxIcon(ctx, cx, cy, size, color) {
 	ctx.save();
-	ctx.translate(cx, cy);
-	const r = size / 2;
-	const sides = 8;
-	const cornerRadius = r * 0.22;
-	const rotationOffset = -Math.PI / 8;
 
-	// Outer rounded-octagon outline (clip boundary + stroke).
-	const outerPath = new Path2D();
-	const verts = [];
-	for (let i = 0; i <= sides; i++) {
-		const angle = (Math.PI * 2 / sides) * i + rotationOffset;
-		verts.push([r * Math.cos(angle), r * Math.sin(angle)]);
-	}
-	for (let i = 0; i < sides; i++) {
-		const [x1, y1] = verts[i];
-		const [x2, y2] = verts[i + 1];
-		if (i === 0) outerPath.moveTo(x1, y1);
-		outerPath.arcTo(x1, y1, x2, y2, cornerRadius);
-		outerPath.lineTo(x2, y2);
-	}
-	outerPath.closePath();
+	const outerR = size / 2;
+	const ringOuterSize = size * 0.62;   // outline hexagon's flat "diameter"
+	const ringInset = size * 0.09;       // ring thickness
+	const holeSize = size * 0.30;        // center square hole
 
-	// Base fill so there are no gaps between facets at the clipped edges.
+	// Outer solid hexagon.
+	const outerHex = hexPath(cx, cy, outerR);
 	ctx.fillStyle = color;
-	ctx.fill(outerPath);
+	ctx.fill(outerHex);
 
-	// Clip to the gem shape, then draw shaded triangular facets fanning out
-	// from the center to each pair of adjacent vertices. Alternating shades
-	// (lighter toward the upper-left "light source", darker toward the
-	// lower-right) create the faceted, beveled-gem look.
+	// Middle inset hexagon (cut out from outer, leaving a hexagon "frame").
+	const midHex = hexPath(cx, cy, outerR - size * 0.16);
 	ctx.save();
-	ctx.clip(outerPath);
-
-	const lightAngle = rotationOffset + Math.PI * 1.25; // upper-left-ish
-	for (let i = 0; i < sides; i++) {
-		const [x1, y1] = verts[i];
-		const [x2, y2] = verts[i + 1];
-		const midAngle = (Math.PI * 2 / sides) * (i + 0.5) + rotationOffset;
-
-		let diff = midAngle - lightAngle;
-		diff = Math.atan2(Math.sin(diff), Math.cos(diff)); // normalize to [-PI, PI]
-		const facing = Math.cos(diff); // 1 = facing light, -1 = facing away
-
-		const shade = facing * 0.32; // positive lightens, negative darkens
-		ctx.fillStyle = shadeColor(color, shade);
-
-		ctx.beginPath();
-		ctx.moveTo(0, 0);
-		ctx.lineTo(x1, y1);
-		ctx.lineTo(x2, y2);
-		ctx.closePath();
-		ctx.fill();
-	}
-
-	// Soft highlight near the top to sell the "polished gem" reflection.
-	const highlightGradient = ctx.createRadialGradient(
-		-r * 0.25, -r * 0.35, 0,
-		-r * 0.25, -r * 0.35, r * 0.9
-	);
-	highlightGradient.addColorStop(0, 'rgba(255,255,255,0.35)');
-	highlightGradient.addColorStop(1, 'rgba(255,255,255,0)');
-	ctx.fillStyle = highlightGradient;
-	ctx.fillRect(-r, -r, size, size);
-
+	ctx.globalCompositeOperation = 'destination-out';
+	ctx.fill(midHex);
 	ctx.restore();
 
-	// Outline on top.
-	ctx.lineWidth = size * 0.09;
+	// Inner rounded-square ring (re-filled solid inside the gap we just cut).
+	const outerRoundedRect = roundedRectPath(cx, cy, ringOuterSize, ringOuterSize, ringOuterSize * 0.22);
+	ctx.fillStyle = color;
+	ctx.fill(outerRoundedRect);
+
+	// Punch out the inner rounded-square ring's hole so it reads as a frame.
+	const innerRoundedRect = roundedRectPath(cx, cy, ringOuterSize - ringInset * 2, ringOuterSize - ringInset * 2, (ringOuterSize - ringInset * 2) * 0.22);
+	ctx.save();
+	ctx.globalCompositeOperation = 'destination-out';
+	ctx.fill(innerRoundedRect);
+	ctx.restore();
+
+	// Solid center square.
+	const centerSquare = roundedRectPath(cx, cy, holeSize, holeSize, holeSize * 0.08);
+	ctx.fillStyle = color;
+	ctx.fill(centerSquare);
+
+	// Outline on top for definition.
+	ctx.lineWidth = size * 0.045;
 	ctx.strokeStyle = OUTLINE_COLOR;
-	ctx.stroke(outerPath);
+	ctx.stroke(outerHex);
 
 	ctx.restore();
 }
