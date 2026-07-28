@@ -170,11 +170,11 @@ function drawRobuxIcon(ctx, cx, cy, size, color) {
 	const outerR = size / 2;
 	const outerCornerRadius = size * 0.15;
 
-	const ringOuterSize = size * 0.66;
-	const ringThickness = size * 0.22;
-	const ringCornerRadius = ringOuterSize * 0.26;
+	const ringOuterSize = size * 0.72;
+	const ringThickness = size * 0.19;
+	const ringCornerRadius = ringOuterSize * 0.28;
 
-	const holeSize = size * 0.13;
+	const holeSize = size * 0.16;
 	const holeCornerRadius = holeSize * 0.22;
 
 	// Outer rounded hexagon (solid).
