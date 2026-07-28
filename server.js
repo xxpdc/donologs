@@ -47,7 +47,7 @@ function hexToRgba(hex, alpha) {
 	return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-// Radial glow from center, transparent at edges, strength scaled per tier.
+// Radial glow from the bottom center, transparent at edges, strength scaled per tier.
 // 100 tier has gradientStrength 0, so it's fully transparent (no gradient).
 function drawBackground(ctx, tier) {
 	if (tier.gradientStrength === 0) {
@@ -55,8 +55,8 @@ function drawBackground(ctx, tier) {
 	}
 
 	const gradient = ctx.createRadialGradient(
-		CENTER_X, HEIGHT * 0.55, 0,
-		CENTER_X, HEIGHT * 0.55, WIDTH * 0.5
+		CENTER_X, HEIGHT * 1.1, 0,
+		CENTER_X, HEIGHT * 1.1, WIDTH * 0.55
 	);
 	const alpha = tier.gradientStrength;
 	gradient.addColorStop(0, hexToRgba(tier.color, 0.85 * alpha));
@@ -124,17 +124,6 @@ function drawRobuxIcon(ctx, cx, cy, size, color) {
 	ctx.fillStyle = color;
 	ctx.fill();
 
-	const sq = size * 0.24;
-	const sqRadius = sq * 0.25;
-	ctx.beginPath();
-	ctx.moveTo(-sq / 2 + sqRadius, -sq / 2);
-	ctx.arcTo(sq / 2, -sq / 2, sq / 2, sq / 2, sqRadius);
-	ctx.arcTo(sq / 2, sq / 2, -sq / 2, sq / 2, sqRadius);
-	ctx.arcTo(-sq / 2, sq / 2, -sq / 2, -sq / 2, sqRadius);
-	ctx.arcTo(-sq / 2, -sq / 2, sq / 2, -sq / 2, sqRadius);
-	ctx.closePath();
-	ctx.fillStyle = '#FFFFFF';
-	ctx.fill();
 	ctx.restore();
 }
 
