@@ -124,6 +124,13 @@ function drawRobuxIcon(ctx, cx, cy, size, color) {
 	ctx.fillStyle = color;
 	ctx.fill();
 
+	const circleRadius = size * 0.14;
+	ctx.globalCompositeOperation = 'destination-out';
+	ctx.beginPath();
+	ctx.arc(0, 0, circleRadius, 0, Math.PI * 2);
+	ctx.fill();
+	ctx.globalCompositeOperation = 'source-over';
+
 	ctx.restore();
 }
 
