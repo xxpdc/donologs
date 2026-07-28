@@ -1,5 +1,5 @@
 const express = require('express');
-const { createCanvas, loadImage, registerFont } = require('canvas');
+const { createCanvas, loadImage, GlobalFonts } = require('@napi-rs/canvas');
 const path = require('path');
 const fetch = require('node-fetch');
 const FormData = require('form-data');
@@ -8,7 +8,7 @@ const app = express();
 app.use(express.json());
 
 try {
-	registerFont(path.join(__dirname, 'Baloo2-ExtraBold.ttf'), { family: 'Baloo2' });
+	GlobalFonts.registerFromPath(path.join(__dirname, 'Baloo2-ExtraBold.ttf'), 'Baloo2');
 	console.log('Font registered successfully');
 } catch (err) {
 	console.error('FONT REGISTRATION FAILED:', err);
@@ -111,6 +111,7 @@ async function renderDonationImage({ donatorName, donatorUserId, raiserName, rai
 	const canvas = createCanvas(WIDTH, HEIGHT);
 	const ctx = canvas.getContext('2d');
 	const tier = getTier(amount);
+	console.log('Tier:', tier);
 
 	console.log('Fetching avatars...');
 	const [donatorAvatarUrl, raiserAvatarUrl] = await Promise.all([
