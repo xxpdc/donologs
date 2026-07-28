@@ -52,8 +52,8 @@ function lightenTier(hex, ratio) {
 function drawBackground(ctx, tier) {
 	const gradient = ctx.createLinearGradient(0, 0, 0, HEIGHT);
 	gradient.addColorStop(0, 'rgba(255,255,255,0)');
-	gradient.addColorStop(0.55, 'rgba(255,255,255,0)');
-	gradient.addColorStop(0.75, lightenTier(tier.color, 0.55));
+	gradient.addColorStop(0.35, lightenTier(tier.color, 0.85));
+	gradient.addColorStop(0.65, lightenTier(tier.color, 0.4));
 	gradient.addColorStop(1, tier.color);
 
 	ctx.fillStyle = gradient;
