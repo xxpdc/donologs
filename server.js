@@ -8,7 +8,7 @@ const app = express();
 app.use(express.json());
 
 try {
-	GlobalFonts.registerFromPath(path.join(__dirname, 'Baloo2-ExtraBold.ttf'), 'Baloo2');
+	GlobalFonts.registerFromPath(path.join(__dirname, 'Montserrat-Black.ttf'), 'Montserrat');
 	console.log('Font registered successfully');
 } catch (err) {
 	console.error('FONT REGISTRATION FAILED:', err);
@@ -38,6 +38,9 @@ async function getAvatarUrl(userId) {
 	return data.data[0].imageUrl;
 }
 
+// Transparent PNG: no fillRect background at all.
+// A soft radial glow is drawn instead, using globalAlpha so it fades to
+// full transparency rather than to an opaque dark color.
 function drawBackground(ctx, tier) {
 	const gradient = ctx.createRadialGradient(
 		CENTER_X, HEIGHT * 0.5, 0,
@@ -45,14 +48,17 @@ function drawBackground(ctx, tier) {
 	);
 	gradient.addColorStop(0, tier.color);
 	gradient.addColorStop(0.4, tier.color);
-	gradient.addColorStop(1, '#0d0007');
+	gradient.addColorStop(1, 'rgba(0,0,0,0)');
 
+	ctx.save();
+	ctx.globalAlpha = 0.55;
 	ctx.fillStyle = gradient;
 	ctx.fillRect(0, 0, WIDTH, HEIGHT);
+	ctx.restore();
 }
 
 function drawOutlinedText(ctx, text, x, y, fillColor, fontSize, align = 'center') {
-	ctx.font = `${fontSize}px Baloo2`;
+	ctx.font = `${fontSize}px Montserrat`;
 	ctx.textAlign = align;
 	ctx.textBaseline = 'middle';
 	ctx.lineWidth = fontSize * 0.16;
@@ -134,7 +140,7 @@ async function renderDonationImage({ donatorName, donatorUserId, raiserName, rai
 
 	console.log('Drawing amount...');
 	const amountText = Number(amount).toLocaleString('en-US');
-	ctx.font = '96px Baloo2';
+	ctx.font = '96px Montserrat';
 	const amountWidth = ctx.measureText(amountText).width;
 	const iconSize = 90;
 	const rowWidth = iconSize + 20 + amountWidth;
