@@ -6,7 +6,7 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "canvas": "^2.11.2",
+    "@napi-rs/canvas": "^0.1.53",
     "express": "^4.19.2",
     "node-fetch": "^2.7.0",
     "form-data": "^4.0.0"
