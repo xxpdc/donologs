@@ -7,7 +7,12 @@ const FormData = require('form-data');
 const app = express();
 app.use(express.json());
 
-registerFont(path.join(__dirname, 'Baloo2-ExtraBold.ttf'), { family: 'Baloo2' });
+try {
+	registerFont(path.join(__dirname, 'Baloo2-ExtraBold.ttf'), { family: 'Baloo2' });
+	console.log('Font registered successfully');
+} catch (err) {
+	console.error('FONT REGISTRATION FAILED:', err);
+}
 
 const WIDTH = 2048;
 const HEIGHT = 576;
@@ -107,19 +112,25 @@ async function renderDonationImage({ donatorName, donatorUserId, raiserName, rai
 	const ctx = canvas.getContext('2d');
 	const tier = getTier(amount);
 
+	console.log('Fetching avatars...');
 	const [donatorAvatarUrl, raiserAvatarUrl] = await Promise.all([
 		getAvatarUrl(donatorUserId),
 		getAvatarUrl(raiserUserId)
 	]);
+	console.log('Avatars fetched:', donatorAvatarUrl, raiserAvatarUrl);
 
+	console.log('Drawing background...');
 	drawBackground(ctx, tier);
 
+	console.log('Drawing avatars...');
 	await drawAvatarCircle(ctx, donatorAvatarUrl, LEFT_X, AVATAR_Y, tier.color);
 	await drawAvatarCircle(ctx, raiserAvatarUrl, RIGHT_X, AVATAR_Y, tier.color);
 
+	console.log('Drawing usernames...');
 	drawOutlinedText(ctx, '@' + donatorName, LEFT_X, AVATAR_Y + AVATAR_RADIUS + 70, '#FFFFFF', 56);
 	drawOutlinedText(ctx, '@' + raiserName, RIGHT_X, AVATAR_Y + AVATAR_RADIUS + 70, '#FFFFFF', 56);
 
+	console.log('Drawing amount...');
 	const amountText = Number(amount).toLocaleString('en-US');
 	ctx.font = '96px Baloo2';
 	const amountWidth = ctx.measureText(amountText).width;
@@ -132,6 +143,7 @@ async function renderDonationImage({ donatorName, donatorUserId, raiserName, rai
 
 	drawOutlinedText(ctx, 'donated to', CENTER_X, 260, '#FFFFFF', 72);
 
+	console.log('Render complete');
 	return canvas.toBuffer('image/png');
 }
 
