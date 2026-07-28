@@ -35,12 +35,11 @@ async function getAvatarUrl(userId) {
 
 function drawBackground(ctx, tier) {
 	const gradient = ctx.createRadialGradient(
-		CENTER_X, HEIGHT * 0.35, 0,
-		CENTER_X, HEIGHT * 0.35, WIDTH * 0.75
+		CENTER_X, HEIGHT * 0.5, 0,
+		CENTER_X, HEIGHT * 0.5, WIDTH * 0.5
 	);
-	gradient.addColorStop(0, '#000000');
-	gradient.addColorStop(0.55, '#000000');
-	gradient.addColorStop(1, tier.color);
+	gradient.addColorStop(0, tier.color);
+	gradient.addColorStop(1, '#1a0007');
 
 	ctx.fillStyle = gradient;
 	ctx.fillRect(0, 0, WIDTH, HEIGHT);
