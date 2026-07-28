@@ -121,25 +121,28 @@ async function drawAvatarCircle(ctx, imgUrl, cx, cy, ringColor) {
 	ctx.restore();
 }
 
-// Draws the actual Robux logo as vector shapes: an outer hexagon, a rounded
-// square ring inset inside it, and a solid square hole in the middle.
-// This matches Roblox's real mark and needs no external/proprietary font.
-function hexPoints(cx, cy, r, rotationOffset = -Math.PI / 2) {
+// Draws the actual Robux logo as vector shapes: a rounded-corner hexagon,
+// a thin rounded-square ring sitting close to the hex's inner edge, and a
+// small solid rounded square in the center. Proportions were matched
+// directly against reference screenshots of the real icon.
+function roundedHexPath(cx, cy, r, cornerRadius, rotationOffset = -Math.PI / 2) {
 	const pts = [];
 	for (let i = 0; i < 6; i++) {
 		const angle = rotationOffset + (Math.PI * 2 / 6) * i;
 		pts.push([cx + r * Math.cos(angle), cy + r * Math.sin(angle)]);
 	}
-	return pts;
-}
-
-function hexPath(cx, cy, r, rotationOffset = -Math.PI / 2) {
-	const pts = hexPoints(cx, cy, r, rotationOffset);
 	const p = new Path2D();
-	pts.forEach(([x, y], i) => {
-		if (i === 0) p.moveTo(x, y);
-		else p.lineTo(x, y);
-	});
+	for (let i = 0; i < 6; i++) {
+		const [x1, y1] = pts[i];
+		const [x2, y2] = pts[(i + 1) % 6];
+		if (i === 0) {
+			const [xPrev, yPrev] = pts[5];
+			const dx = x1 - xPrev, dy = y1 - yPrev;
+			const len = Math.hypot(dx, dy);
+			p.moveTo(x1 - (dx / len) * cornerRadius, y1 - (dy / len) * cornerRadius);
+		}
+		p.arcTo(x1, y1, x2, y2, cornerRadius);
+	}
 	p.closePath();
 	return p;
 }
@@ -165,40 +168,46 @@ function drawRobuxIcon(ctx, cx, cy, size, color) {
 	ctx.save();
 
 	const outerR = size / 2;
-	const ringOuterSize = size * 0.62;   // outline hexagon's flat "diameter"
-	const ringInset = size * 0.09;       // ring thickness
-	const holeSize = size * 0.30;        // center square hole
+	const outerCornerRadius = size * 0.13;
 
-	// Outer solid hexagon.
-	const outerHex = hexPath(cx, cy, outerR);
+	const ringOuterSize = size * 0.72;
+	const ringThickness = size * 0.085;
+	const ringCornerRadius = ringOuterSize * 0.30;
+
+	const holeSize = size * 0.24;
+	const holeCornerRadius = holeSize * 0.18;
+
+	// Outer rounded hexagon (solid).
+	const outerHex = roundedHexPath(cx, cy, outerR, outerCornerRadius);
 	ctx.fillStyle = color;
 	ctx.fill(outerHex);
 
-	// Middle inset hexagon (cut out from outer, leaving a hexagon "frame").
-	const midHex = hexPath(cx, cy, outerR - size * 0.16);
+	// Cut out the middle, leaving just a thin hex border near the edge.
+	const innerCutHex = roundedHexPath(cx, cy, outerR - size * 0.06, outerCornerRadius * 0.7);
 	ctx.save();
 	ctx.globalCompositeOperation = 'destination-out';
-	ctx.fill(midHex);
+	ctx.fill(innerCutHex);
 	ctx.restore();
 
-	// Inner rounded-square ring (re-filled solid inside the gap we just cut).
-	const outerRoundedRect = roundedRectPath(cx, cy, ringOuterSize, ringOuterSize, ringOuterSize * 0.22);
+	// Re-fill the rounded-square ring (outer part).
+	const ringOuter = roundedRectPath(cx, cy, ringOuterSize, ringOuterSize, ringCornerRadius);
 	ctx.fillStyle = color;
-	ctx.fill(outerRoundedRect);
+	ctx.fill(ringOuter);
 
-	// Punch out the inner rounded-square ring's hole so it reads as a frame.
-	const innerRoundedRect = roundedRectPath(cx, cy, ringOuterSize - ringInset * 2, ringOuterSize - ringInset * 2, (ringOuterSize - ringInset * 2) * 0.22);
+	// Punch the ring's hole so it reads as a thin frame.
+	const ringInnerSize = ringOuterSize - ringThickness * 2;
+	const ringInner = roundedRectPath(cx, cy, ringInnerSize, ringInnerSize, ringCornerRadius * (ringInnerSize / ringOuterSize));
 	ctx.save();
 	ctx.globalCompositeOperation = 'destination-out';
-	ctx.fill(innerRoundedRect);
+	ctx.fill(ringInner);
 	ctx.restore();
 
 	// Solid center square.
-	const centerSquare = roundedRectPath(cx, cy, holeSize, holeSize, holeSize * 0.08);
+	const centerSquare = roundedRectPath(cx, cy, holeSize, holeSize, holeCornerRadius);
 	ctx.fillStyle = color;
 	ctx.fill(centerSquare);
 
-	// Outline on top for definition.
+	// Outline.
 	ctx.lineWidth = size * 0.045;
 	ctx.strokeStyle = OUTLINE_COLOR;
 	ctx.stroke(outerHex);
