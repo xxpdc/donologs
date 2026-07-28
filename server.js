@@ -22,6 +22,7 @@ const AVATAR_Y = 210;
 const LEFT_X = 400;
 const RIGHT_X = WIDTH - 400;
 const CENTER_X = WIDTH / 2;
+const OUTLINE_COLOR = '#2b2b2b';
 
 function getTier(amount) {
 	if (amount >= 10000) return { color: '#FF0000' };
@@ -38,7 +39,6 @@ async function getAvatarUrl(userId) {
 	return data.data[0].imageUrl;
 }
 
-// Blends a hex color toward white by the given ratio (0-1)
 function lightenTier(hex, ratio) {
 	const num = parseInt(hex.replace('#', ''), 16);
 	const r = (num >> 16) & 255;
@@ -48,11 +48,12 @@ function lightenTier(hex, ratio) {
 	return `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`;
 }
 
-// Vertical gradient: white at top fading down into the tier color at the bottom
+// White for most of the top, transitioning to the tier color only in the bottom third
 function drawBackground(ctx, tier) {
 	const gradient = ctx.createLinearGradient(0, 0, 0, HEIGHT);
 	gradient.addColorStop(0, 'rgba(255,255,255,0)');
-	gradient.addColorStop(0.45, lightenTier(tier.color, 0.55) + '');
+	gradient.addColorStop(0.55, 'rgba(255,255,255,0)');
+	gradient.addColorStop(0.75, lightenTier(tier.color, 0.55));
 	gradient.addColorStop(1, tier.color);
 
 	ctx.fillStyle = gradient;
@@ -63,9 +64,9 @@ function drawOutlinedText(ctx, text, x, y, fillColor, fontSize, align = 'center'
 	ctx.font = `${fontSize}px Fredoka`;
 	ctx.textAlign = align;
 	ctx.textBaseline = 'middle';
-	ctx.lineWidth = fontSize * 0.16;
+	ctx.lineWidth = fontSize * 0.14;
 	ctx.lineJoin = 'round';
-	ctx.strokeStyle = '#000000';
+	ctx.strokeStyle = OUTLINE_COLOR;
 	ctx.strokeText(text, x, y);
 	ctx.fillStyle = fillColor;
 	ctx.fillText(text, x, y);
@@ -101,17 +102,17 @@ function drawRobuxIcon(ctx, cx, cy, size, color) {
 		if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
 	}
 	ctx.closePath();
-	ctx.lineWidth = size * 0.16;
-	ctx.strokeStyle = '#000000';
+	ctx.lineWidth = size * 0.09;
+	ctx.strokeStyle = OUTLINE_COLOR;
 	ctx.stroke();
 	ctx.fillStyle = color;
 	ctx.fill();
-	ctx.strokeStyle = '#000000';
-	ctx.lineWidth = size * 0.08;
+	ctx.strokeStyle = OUTLINE_COLOR;
+	ctx.lineWidth = size * 0.05;
 	ctx.stroke();
 
 	const sq = size * 0.22;
-	ctx.fillStyle = '#000000';
+	ctx.fillStyle = OUTLINE_COLOR;
 	ctx.fillRect(-sq / 2, -sq / 2, sq, sq);
 	ctx.restore();
 }
@@ -137,21 +138,21 @@ async function renderDonationImage({ donatorName, donatorUserId, raiserName, rai
 	await drawAvatarCircle(ctx, raiserAvatarUrl, RIGHT_X, AVATAR_Y, tier.color);
 
 	console.log('Drawing usernames...');
-	drawOutlinedText(ctx, '@' + donatorName, LEFT_X, AVATAR_Y + AVATAR_RADIUS + 70, '#FFFFFF', 56);
-	drawOutlinedText(ctx, '@' + raiserName, RIGHT_X, AVATAR_Y + AVATAR_RADIUS + 70, '#FFFFFF', 56);
+	drawOutlinedText(ctx, '@' + donatorName, LEFT_X, AVATAR_Y + AVATAR_RADIUS + 70, '#FFFFFF', 62);
+	drawOutlinedText(ctx, '@' + raiserName, RIGHT_X, AVATAR_Y + AVATAR_RADIUS + 70, '#FFFFFF', 62);
 
 	console.log('Drawing amount...');
 	const amountText = Number(amount).toLocaleString('en-US');
-	ctx.font = '96px Fredoka';
+	ctx.font = '108px Fredoka';
 	const amountWidth = ctx.measureText(amountText).width;
-	const iconSize = 90;
+	const iconSize = 100;
 	const rowWidth = iconSize + 20 + amountWidth;
 	const rowStartX = CENTER_X - rowWidth / 2;
 
 	drawRobuxIcon(ctx, rowStartX + iconSize / 2, 150, iconSize, tier.color);
-	drawOutlinedText(ctx, amountText, rowStartX + iconSize + 20 + amountWidth / 2, 150, tier.color, 96, 'center');
+	drawOutlinedText(ctx, amountText, rowStartX + iconSize + 20 + amountWidth / 2, 150, tier.color, 108, 'center');
 
-	drawOutlinedText(ctx, 'donated to', CENTER_X, 260, '#FFFFFF', 72);
+	drawOutlinedText(ctx, 'donated to', CENTER_X, 262, '#FFFFFF', 80);
 
 	console.log('Render complete');
 	return canvas.toBuffer('image/png');
