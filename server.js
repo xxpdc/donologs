@@ -168,22 +168,22 @@ function drawRobuxIcon(ctx, cx, cy, size, color) {
 	ctx.save();
 
 	const outerR = size / 2;
-	const outerCornerRadius = size * 0.13;
+	const outerCornerRadius = size * 0.15;
 
-	const ringOuterSize = size * 0.72;
-	const ringThickness = size * 0.085;
-	const ringCornerRadius = ringOuterSize * 0.30;
+	const ringOuterSize = size * 0.56;
+	const ringThickness = size * 0.13;
+	const ringCornerRadius = ringOuterSize * 0.42;
 
-	const holeSize = size * 0.24;
-	const holeCornerRadius = holeSize * 0.18;
+	const holeSize = size * 0.20;
+	const holeCornerRadius = holeSize * 0.3;
 
 	// Outer rounded hexagon (solid).
 	const outerHex = roundedHexPath(cx, cy, outerR, outerCornerRadius);
 	ctx.fillStyle = color;
 	ctx.fill(outerHex);
 
-	// Cut out the middle, leaving just a thin hex border near the edge.
-	const innerCutHex = roundedHexPath(cx, cy, outerR - size * 0.06, outerCornerRadius * 0.7);
+	// Cut out the middle, leaving a clear visible gap/border before the ring.
+	const innerCutHex = roundedHexPath(cx, cy, outerR - size * 0.10, outerCornerRadius * 0.65);
 	ctx.save();
 	ctx.globalCompositeOperation = 'destination-out';
 	ctx.fill(innerCutHex);
