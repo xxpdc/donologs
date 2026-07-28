@@ -1,5 +1,5 @@
 const express = require('express');
-const { createCanvas, loadImage, GlobalFonts } = require('@napi-rs/canvas');
+const { createCanvas, loadImage, GlobalFonts, Path2D } = require('@napi-rs/canvas');
 const path = require('path');
 const fetch = require('node-fetch');
 const FormData = require('form-data');
@@ -45,6 +45,30 @@ function hexToRgba(hex, alpha) {
 	const g = (num >> 8) & 255;
 	const b = num & 255;
 	return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+// Lighten (positive percent) or darken (negative percent) a hex color.
+function shadeColor(hex, percent) {
+	const num = parseInt(hex.replace('#', ''), 16);
+	let r = (num >> 16) & 255;
+	let g = (num >> 8) & 255;
+	let b = num & 255;
+
+	if (percent >= 0) {
+		r = Math.round(r + (255 - r) * percent);
+		g = Math.round(g + (255 - g) * percent);
+		b = Math.round(b + (255 - b) * percent);
+	} else {
+		r = Math.round(r * (1 + percent));
+		g = Math.round(g * (1 + percent));
+		b = Math.round(b * (1 + percent));
+	}
+
+	r = Math.max(0, Math.min(255, r));
+	g = Math.max(0, Math.min(255, g));
+	b = Math.max(0, Math.min(255, b));
+
+	return `rgb(${r}, ${g}, ${b})`;
 }
 
 // Radial glow from the bottom center, transparent at edges, strength scaled per tier.
@@ -97,39 +121,81 @@ async function drawAvatarCircle(ctx, imgUrl, cx, cy, ringColor) {
 	ctx.restore();
 }
 
+// Draws the current Robux icon: a faceted gem (rounded octagon split into
+// triangular facets, each shaded a bit lighter/darker than the base color
+// to fake a 3D beveled coin), instead of a flat shape with a punched hole.
 function drawRobuxIcon(ctx, cx, cy, size, color) {
 	ctx.save();
 	ctx.translate(cx, cy);
 	const r = size / 2;
 	const sides = 8;
-	const cornerRadius = r * 0.28;
+	const cornerRadius = r * 0.22;
+	const rotationOffset = -Math.PI / 8;
 
-	ctx.beginPath();
-	for (let i = 0; i < sides; i++) {
-		const angle1 = (Math.PI * 2 / sides) * i - Math.PI / 8;
-		const angle2 = (Math.PI * 2 / sides) * (i + 1) - Math.PI / 8;
-		const x1 = r * Math.cos(angle1);
-		const y1 = r * Math.sin(angle1);
-		const x2 = r * Math.cos(angle2);
-		const y2 = r * Math.sin(angle2);
-		if (i === 0) ctx.moveTo(x1, y1);
-		ctx.arcTo(x1, y1, x2, y2, cornerRadius);
-		ctx.lineTo(x2, y2);
+	// Outer rounded-octagon outline (clip boundary + stroke).
+	const outerPath = new Path2D();
+	const verts = [];
+	for (let i = 0; i <= sides; i++) {
+		const angle = (Math.PI * 2 / sides) * i + rotationOffset;
+		verts.push([r * Math.cos(angle), r * Math.sin(angle)]);
 	}
-	ctx.closePath();
+	for (let i = 0; i < sides; i++) {
+		const [x1, y1] = verts[i];
+		const [x2, y2] = verts[i + 1];
+		if (i === 0) outerPath.moveTo(x1, y1);
+		outerPath.arcTo(x1, y1, x2, y2, cornerRadius);
+		outerPath.lineTo(x2, y2);
+	}
+	outerPath.closePath();
 
-	ctx.lineWidth = size * 0.13;
-	ctx.strokeStyle = OUTLINE_COLOR;
-	ctx.stroke();
+	// Base fill so there are no gaps between facets at the clipped edges.
 	ctx.fillStyle = color;
-	ctx.fill();
+	ctx.fill(outerPath);
 
-	const circleRadius = size * 0.14;
-	ctx.globalCompositeOperation = 'destination-out';
-	ctx.beginPath();
-	ctx.arc(0, 0, circleRadius, 0, Math.PI * 2);
-	ctx.fill();
-	ctx.globalCompositeOperation = 'source-over';
+	// Clip to the gem shape, then draw shaded triangular facets fanning out
+	// from the center to each pair of adjacent vertices. Alternating shades
+	// (lighter toward the upper-left "light source", darker toward the
+	// lower-right) create the faceted, beveled-gem look.
+	ctx.save();
+	ctx.clip(outerPath);
+
+	const lightAngle = rotationOffset + Math.PI * 1.25; // upper-left-ish
+	for (let i = 0; i < sides; i++) {
+		const [x1, y1] = verts[i];
+		const [x2, y2] = verts[i + 1];
+		const midAngle = (Math.PI * 2 / sides) * (i + 0.5) + rotationOffset;
+
+		let diff = midAngle - lightAngle;
+		diff = Math.atan2(Math.sin(diff), Math.cos(diff)); // normalize to [-PI, PI]
+		const facing = Math.cos(diff); // 1 = facing light, -1 = facing away
+
+		const shade = facing * 0.32; // positive lightens, negative darkens
+		ctx.fillStyle = shadeColor(color, shade);
+
+		ctx.beginPath();
+		ctx.moveTo(0, 0);
+		ctx.lineTo(x1, y1);
+		ctx.lineTo(x2, y2);
+		ctx.closePath();
+		ctx.fill();
+	}
+
+	// Soft highlight near the top to sell the "polished gem" reflection.
+	const highlightGradient = ctx.createRadialGradient(
+		-r * 0.25, -r * 0.35, 0,
+		-r * 0.25, -r * 0.35, r * 0.9
+	);
+	highlightGradient.addColorStop(0, 'rgba(255,255,255,0.35)');
+	highlightGradient.addColorStop(1, 'rgba(255,255,255,0)');
+	ctx.fillStyle = highlightGradient;
+	ctx.fillRect(-r, -r, size, size);
+
+	ctx.restore();
+
+	// Outline on top.
+	ctx.lineWidth = size * 0.09;
+	ctx.strokeStyle = OUTLINE_COLOR;
+	ctx.stroke(outerPath);
 
 	ctx.restore();
 }
