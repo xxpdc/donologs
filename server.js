@@ -7,7 +7,7 @@ const FormData = require('form-data');
 const app = express();
 app.use(express.json());
 
-registerFont(path.join(__dirname, 'fonts/Baloo2-ExtraBold.ttf'), { family: 'Baloo2' });
+registerFont(path.join(__dirname, 'Baloo2-ExtraBold.ttf'), { family: 'Baloo2' });
 
 const WIDTH = 2048;
 const HEIGHT = 576;
