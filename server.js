@@ -25,9 +25,9 @@ const CENTER_X = WIDTH / 2;
 const OUTLINE_COLOR = '#000000';
 
 function getTier(amount) {
-	if (amount >= 10000) return { color: '#FF0000' };
-	if (amount >= 1000) return { color: '#FF1493' };
-	return { color: '#FF00FF' };
+	if (amount >= 10000) return { color: '#FF0000', gradientStrength: 1.0 };
+	if (amount >= 1000) return { color: '#FF1493', gradientStrength: 0.5 };
+	return { color: '#FF00FF', gradientStrength: 0 };
 }
 
 async function getAvatarUrl(userId) {
@@ -39,21 +39,29 @@ async function getAvatarUrl(userId) {
 	return data.data[0].imageUrl;
 }
 
-function lightenTier(hex, ratio) {
+function hexToRgba(hex, alpha) {
 	const num = parseInt(hex.replace('#', ''), 16);
 	const r = (num >> 16) & 255;
 	const g = (num >> 8) & 255;
 	const b = num & 255;
-	const mix = (c) => Math.round(c + (255 - c) * ratio);
-	return `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`;
+	return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
+// Radial glow from center, transparent at edges, strength scaled per tier.
+// 100 tier has gradientStrength 0, so it's fully transparent (no gradient).
 function drawBackground(ctx, tier) {
-	const gradient = ctx.createLinearGradient(0, 0, 0, HEIGHT);
-	gradient.addColorStop(0, 'rgba(255,255,255,0)');
-	gradient.addColorStop(0.35, lightenTier(tier.color, 0.85));
-	gradient.addColorStop(0.65, lightenTier(tier.color, 0.4));
-	gradient.addColorStop(1, tier.color);
+	if (tier.gradientStrength === 0) {
+		return;
+	}
+
+	const gradient = ctx.createRadialGradient(
+		CENTER_X, HEIGHT * 0.55, 0,
+		CENTER_X, HEIGHT * 0.55, WIDTH * 0.5
+	);
+	const alpha = tier.gradientStrength;
+	gradient.addColorStop(0, hexToRgba(tier.color, 0.85 * alpha));
+	gradient.addColorStop(0.5, hexToRgba(tier.color, 0.4 * alpha));
+	gradient.addColorStop(1, 'rgba(0,0,0,0)');
 
 	ctx.fillStyle = gradient;
 	ctx.fillRect(0, 0, WIDTH, HEIGHT);
@@ -93,26 +101,40 @@ function drawRobuxIcon(ctx, cx, cy, size, color) {
 	ctx.save();
 	ctx.translate(cx, cy);
 	const r = size / 2;
+	const sides = 8;
+	const cornerRadius = r * 0.28;
+
 	ctx.beginPath();
-	for (let i = 0; i < 6; i++) {
-		const angle = (Math.PI / 3) * i - Math.PI / 6;
-		const px = r * Math.cos(angle);
-		const py = r * Math.sin(angle);
-		if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+	for (let i = 0; i < sides; i++) {
+		const angle1 = (Math.PI * 2 / sides) * i - Math.PI / 8;
+		const angle2 = (Math.PI * 2 / sides) * (i + 1) - Math.PI / 8;
+		const x1 = r * Math.cos(angle1);
+		const y1 = r * Math.sin(angle1);
+		const x2 = r * Math.cos(angle2);
+		const y2 = r * Math.sin(angle2);
+		if (i === 0) ctx.moveTo(x1, y1);
+		ctx.arcTo(x1, y1, x2, y2, cornerRadius);
+		ctx.lineTo(x2, y2);
 	}
 	ctx.closePath();
-	ctx.lineWidth = size * 0.16;
+
+	ctx.lineWidth = size * 0.13;
 	ctx.strokeStyle = OUTLINE_COLOR;
 	ctx.stroke();
 	ctx.fillStyle = color;
 	ctx.fill();
-	ctx.strokeStyle = OUTLINE_COLOR;
-	ctx.lineWidth = size * 0.08;
-	ctx.stroke();
 
-	const sq = size * 0.22;
-	ctx.fillStyle = OUTLINE_COLOR;
-	ctx.fillRect(-sq / 2, -sq / 2, sq, sq);
+	const sq = size * 0.24;
+	const sqRadius = sq * 0.25;
+	ctx.beginPath();
+	ctx.moveTo(-sq / 2 + sqRadius, -sq / 2);
+	ctx.arcTo(sq / 2, -sq / 2, sq / 2, sq / 2, sqRadius);
+	ctx.arcTo(sq / 2, sq / 2, -sq / 2, sq / 2, sqRadius);
+	ctx.arcTo(-sq / 2, sq / 2, -sq / 2, -sq / 2, sqRadius);
+	ctx.arcTo(-sq / 2, -sq / 2, sq / 2, -sq / 2, sqRadius);
+	ctx.closePath();
+	ctx.fillStyle = '#FFFFFF';
+	ctx.fill();
 	ctx.restore();
 }
 
