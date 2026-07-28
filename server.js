@@ -8,7 +8,7 @@ const app = express();
 app.use(express.json());
 
 try {
-	GlobalFonts.registerFromPath(path.join(__dirname, 'Montserrat-Black.ttf'), 'Montserrat');
+	GlobalFonts.registerFromPath(path.join(__dirname, 'Fredoka-SemiBold.ttf'), 'Fredoka');
 	console.log('Font registered successfully');
 } catch (err) {
 	console.error('FONT REGISTRATION FAILED:', err);
@@ -38,27 +38,29 @@ async function getAvatarUrl(userId) {
 	return data.data[0].imageUrl;
 }
 
-// Transparent PNG: no fillRect background at all.
-// A soft radial glow is drawn instead, using globalAlpha so it fades to
-// full transparency rather than to an opaque dark color.
-function drawBackground(ctx, tier) {
-	const gradient = ctx.createRadialGradient(
-		CENTER_X, HEIGHT * 0.5, 0,
-		CENTER_X, HEIGHT * 0.5, WIDTH * 0.35
-	);
-	gradient.addColorStop(0, tier.color);
-	gradient.addColorStop(0.4, tier.color);
-	gradient.addColorStop(1, 'rgba(0,0,0,0)');
+// Blends a hex color toward white by the given ratio (0-1)
+function lightenTier(hex, ratio) {
+	const num = parseInt(hex.replace('#', ''), 16);
+	const r = (num >> 16) & 255;
+	const g = (num >> 8) & 255;
+	const b = num & 255;
+	const mix = (c) => Math.round(c + (255 - c) * ratio);
+	return `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`;
+}
 
-	ctx.save();
-	ctx.globalAlpha = 0.55;
+// Vertical gradient: white at top fading down into the tier color at the bottom
+function drawBackground(ctx, tier) {
+	const gradient = ctx.createLinearGradient(0, 0, 0, HEIGHT);
+	gradient.addColorStop(0, '#FFFFFF');
+	gradient.addColorStop(0.55, lightenTier(tier.color, 0.55));
+	gradient.addColorStop(1, tier.color);
+
 	ctx.fillStyle = gradient;
 	ctx.fillRect(0, 0, WIDTH, HEIGHT);
-	ctx.restore();
 }
 
 function drawOutlinedText(ctx, text, x, y, fillColor, fontSize, align = 'center') {
-	ctx.font = `${fontSize}px Montserrat`;
+	ctx.font = `${fontSize}px Fredoka`;
 	ctx.textAlign = align;
 	ctx.textBaseline = 'middle';
 	ctx.lineWidth = fontSize * 0.16;
@@ -140,7 +142,7 @@ async function renderDonationImage({ donatorName, donatorUserId, raiserName, rai
 
 	console.log('Drawing amount...');
 	const amountText = Number(amount).toLocaleString('en-US');
-	ctx.font = '96px Montserrat';
+	ctx.font = '96px Fredoka';
 	const amountWidth = ctx.measureText(amountText).width;
 	const iconSize = 90;
 	const rowWidth = iconSize + 20 + amountWidth;
