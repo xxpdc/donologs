@@ -8,7 +8,7 @@ const app = express();
 app.use(express.json());
 
 try {
-	GlobalFonts.registerFromPath(path.join(__dirname, 'Fredoka-SemiBold.ttf'), 'Fredoka');
+	GlobalFonts.registerFromPath(path.join(__dirname, 'Montserrat-Black.ttf'), 'Montserrat');
 	console.log('Font registered successfully');
 } catch (err) {
 	console.error('FONT REGISTRATION FAILED:', err);
@@ -22,7 +22,7 @@ const AVATAR_Y = 210;
 const LEFT_X = 400;
 const RIGHT_X = WIDTH - 400;
 const CENTER_X = WIDTH / 2;
-const OUTLINE_COLOR = '#2b2b2b';
+const OUTLINE_COLOR = '#000000';
 
 function getTier(amount) {
 	if (amount >= 10000) return { color: '#FF0000' };
@@ -48,7 +48,6 @@ function lightenTier(hex, ratio) {
 	return `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`;
 }
 
-// White for most of the top, transitioning to the tier color only in the bottom third
 function drawBackground(ctx, tier) {
 	const gradient = ctx.createLinearGradient(0, 0, 0, HEIGHT);
 	gradient.addColorStop(0, 'rgba(255,255,255,0)');
@@ -61,10 +60,10 @@ function drawBackground(ctx, tier) {
 }
 
 function drawOutlinedText(ctx, text, x, y, fillColor, fontSize, align = 'center') {
-	ctx.font = `${fontSize}px Fredoka`;
+	ctx.font = `${fontSize}px Montserrat`;
 	ctx.textAlign = align;
 	ctx.textBaseline = 'middle';
-	ctx.lineWidth = fontSize * 0.14;
+	ctx.lineWidth = fontSize * 0.16;
 	ctx.lineJoin = 'round';
 	ctx.strokeStyle = OUTLINE_COLOR;
 	ctx.strokeText(text, x, y);
@@ -102,13 +101,13 @@ function drawRobuxIcon(ctx, cx, cy, size, color) {
 		if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
 	}
 	ctx.closePath();
-	ctx.lineWidth = size * 0.09;
+	ctx.lineWidth = size * 0.16;
 	ctx.strokeStyle = OUTLINE_COLOR;
 	ctx.stroke();
 	ctx.fillStyle = color;
 	ctx.fill();
 	ctx.strokeStyle = OUTLINE_COLOR;
-	ctx.lineWidth = size * 0.05;
+	ctx.lineWidth = size * 0.08;
 	ctx.stroke();
 
 	const sq = size * 0.22;
@@ -138,21 +137,21 @@ async function renderDonationImage({ donatorName, donatorUserId, raiserName, rai
 	await drawAvatarCircle(ctx, raiserAvatarUrl, RIGHT_X, AVATAR_Y, tier.color);
 
 	console.log('Drawing usernames...');
-	drawOutlinedText(ctx, '@' + donatorName, LEFT_X, AVATAR_Y + AVATAR_RADIUS + 70, '#FFFFFF', 62);
-	drawOutlinedText(ctx, '@' + raiserName, RIGHT_X, AVATAR_Y + AVATAR_RADIUS + 70, '#FFFFFF', 62);
+	drawOutlinedText(ctx, '@' + donatorName, LEFT_X, AVATAR_Y + AVATAR_RADIUS + 70, '#FFFFFF', 70);
+	drawOutlinedText(ctx, '@' + raiserName, RIGHT_X, AVATAR_Y + AVATAR_RADIUS + 70, '#FFFFFF', 70);
 
 	console.log('Drawing amount...');
 	const amountText = Number(amount).toLocaleString('en-US');
-	ctx.font = '108px Fredoka';
+	ctx.font = '124px Montserrat';
 	const amountWidth = ctx.measureText(amountText).width;
-	const iconSize = 100;
+	const iconSize = 110;
 	const rowWidth = iconSize + 20 + amountWidth;
 	const rowStartX = CENTER_X - rowWidth / 2;
 
 	drawRobuxIcon(ctx, rowStartX + iconSize / 2, 150, iconSize, tier.color);
-	drawOutlinedText(ctx, amountText, rowStartX + iconSize + 20 + amountWidth / 2, 150, tier.color, 108, 'center');
+	drawOutlinedText(ctx, amountText, rowStartX + iconSize + 20 + amountWidth / 2, 150, tier.color, 124, 'center');
 
-	drawOutlinedText(ctx, 'donated to', CENTER_X, 262, '#FFFFFF', 80);
+	drawOutlinedText(ctx, 'donated to', CENTER_X, 268, '#FFFFFF', 92);
 
 	console.log('Render complete');
 	return canvas.toBuffer('image/png');
