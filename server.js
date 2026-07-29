@@ -83,17 +83,18 @@ function drawBackground(ctx, tier) {
 
 	const alpha = tier.gradientStrength; // 0.5 for 1000, 1.0 for 10000+
 
-	// Radius scales with tier strength: bigger amounts = bigger, more
-	// intense glow. At alpha=0.5 -> ~0.62*WIDTH, at alpha=1.0 -> ~0.8*WIDTH.
-	const radius = WIDTH * (0.45 + 0.35 * alpha);
+	// Anchor point pushed well BELOW the canvas so what we see is only the
+	// top slice of the radial gradient — this reads as a glow rising from
+	// the bottom edge rather than a circle centered on it.
+	const originY = HEIGHT * (1.6 + 0.9 * alpha);
+	const radius = HEIGHT * (1.3 + 1.6 * alpha);
 
 	const gradient = ctx.createRadialGradient(
-		CENTER_X, HEIGHT, 0,
-		CENTER_X, HEIGHT, radius
+		CENTER_X, originY, 0,
+		CENTER_X, originY, radius
 	);
 	gradient.addColorStop(0, hexToRgba(tier.color, 0.95 * alpha));
-	gradient.addColorStop(0.35, hexToRgba(tier.color, 0.65 * alpha));
-	gradient.addColorStop(0.7, hexToRgba(tier.color, 0.25 * alpha));
+	gradient.addColorStop(0.45, hexToRgba(tier.color, 0.55 * alpha));
 	gradient.addColorStop(1, 'rgba(0,0,0,0)');
 
 	ctx.fillStyle = gradient;
