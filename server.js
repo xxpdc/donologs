@@ -8,7 +8,7 @@ const app = express();
 app.use(express.json());
 
 try {
-	GlobalFonts.registerFromPath(path.join(__dirname, 'Montserrat-Black.ttf'), 'Montserrat');
+	GlobalFonts.registerFromPath(path.join(__dirname, 'Montserrat-ExtraBold.ttf'), 'Montserrat');
 	console.log('Montserrat registered successfully');
 } catch (err) {
 	console.error('FONT REGISTRATION FAILED (Montserrat):', err);
