@@ -71,11 +71,11 @@ function shadeColor(hex, percent) {
 	return `rgb(${r}, ${g}, ${b})`;
 }
 
-// Radial glow anchored at the bottom-center EDGE of the canvas (y = HEIGHT,
-// not below it), transparent toward the top. Strength AND spread both scale
-// per tier: 1000 gets a small, subtle glow that barely reaches the avatars
-// (like reference image 1), while 10000+ gets a big, intense glow that
-// washes most of the banner (like reference image 2).
+// Radial glow anchored well below the canvas so only the top slice of the
+// gradient is visible — this reads as a glow rising from the bottom edge
+// rather than a circle centered on the banner. Strength AND spread both
+// scale per tier: 1000 gets a small, subtle glow, 10000+ gets a big,
+// intense glow that climbs much higher up the frame.
 function drawBackground(ctx, tier) {
 	if (tier.gradientStrength === 0) {
 		return;
@@ -83,9 +83,6 @@ function drawBackground(ctx, tier) {
 
 	const alpha = tier.gradientStrength; // 0.5 for 1000, 1.0 for 10000+
 
-	// Anchor point pushed well BELOW the canvas so what we see is only the
-	// top slice of the radial gradient — this reads as a glow rising from
-	// the bottom edge rather than a circle centered on it.
 	const originY = HEIGHT * (1.6 + 0.9 * alpha);
 	const radius = HEIGHT * (1.3 + 1.6 * alpha);
 
@@ -133,8 +130,8 @@ async function drawAvatarCircle(ctx, imgUrl, cx, cy, ringColor) {
 
 // Draws the actual Robux logo as vector shapes: a rounded-corner hexagon,
 // a thin rounded-square ring sitting close to the hex's inner edge, and a
-// small solid rounded square in the center. Proportions were matched
-// directly against reference screenshots of the real icon.
+// small solid rounded square in the center. Proportions matched against
+// reference screenshots of the real icon.
 function roundedHexPath(cx, cy, r, cornerRadius, rotationOffset = -Math.PI / 2) {
 	const pts = [];
 	for (let i = 0; i < 6; i++) {
@@ -180,11 +177,12 @@ function drawRobuxIcon(ctx, cx, cy, size, color) {
 	const outerR = size / 2;
 	const outerCornerRadius = size * 0.15;
 
-	const ringOuterSize = size * 0.72;
-	const ringThickness = size * 0.19;
-	const ringCornerRadius = ringOuterSize * 0.28;
+	// Ring pulled in closer to the outer hex edge, and made thicker/chunkier
+	const ringOuterSize = size * 0.8;
+	const ringThickness = size * 0.24;
+	const ringCornerRadius = ringOuterSize * 0.26;
 
-	const holeSize = size * 0.16;
+	const holeSize = size * 0.14;
 	const holeCornerRadius = holeSize * 0.22;
 
 	// Outer rounded hexagon (solid).
@@ -192,8 +190,8 @@ function drawRobuxIcon(ctx, cx, cy, size, color) {
 	ctx.fillStyle = color;
 	ctx.fill(outerHex);
 
-	// Cut out the middle, leaving just a thin hex border before the ring.
-	const innerCutHex = roundedHexPath(cx, cy, outerR - size * 0.05, outerCornerRadius * 0.65);
+	// Cut out the middle, leaving just a THIN hex border before the ring.
+	const innerCutHex = roundedHexPath(cx, cy, outerR - size * 0.035, outerCornerRadius * 0.75);
 	ctx.save();
 	ctx.globalCompositeOperation = 'destination-out';
 	ctx.fill(innerCutHex);
@@ -204,7 +202,7 @@ function drawRobuxIcon(ctx, cx, cy, size, color) {
 	ctx.fillStyle = color;
 	ctx.fill(ringOuter);
 
-	// Punch the ring's hole so it reads as a thin frame.
+	// Punch the ring's hole so it reads as a thick frame.
 	const ringInnerSize = ringOuterSize - ringThickness * 2;
 	const ringInner = roundedRectPath(cx, cy, ringInnerSize, ringInnerSize, ringCornerRadius * (ringInnerSize / ringOuterSize));
 	ctx.save();
