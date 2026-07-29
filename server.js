@@ -128,99 +128,38 @@ async function drawAvatarCircle(ctx, imgUrl, cx, cy, ringColor) {
 	ctx.restore();
 }
 
-// Draws the actual Robux logo as vector shapes: a rounded-corner hexagon,
-// a thin rounded-square ring sitting close to the hex's inner edge, and a
-// small solid rounded square in the center. Proportions matched against
-// reference screenshots of the real icon.
-function roundedHexPath(cx, cy, r, cornerRadius, rotationOffset = -Math.PI / 2) {
-	const pts = [];
-	for (let i = 0; i < 6; i++) {
-		const angle = rotationOffset + (Math.PI * 2 / 6) * i;
-		pts.push([cx + r * Math.cos(angle), cy + r * Math.sin(angle)]);
+// --- Robux logo: loaded once from disk, then recolored per-tier at draw time ---
+let robuxLogoImage = null;
+async function getRobuxLogoImage() {
+	if (!robuxLogoImage) {
+		robuxLogoImage = await loadImage(path.join(__dirname, 'logorobux.png'));
 	}
-	const p = new Path2D();
-	for (let i = 0; i < 6; i++) {
-		const [x1, y1] = pts[i];
-		const [x2, y2] = pts[(i + 1) % 6];
-		if (i === 0) {
-			const [xPrev, yPrev] = pts[5];
-			const dx = x1 - xPrev, dy = y1 - yPrev;
-			const len = Math.hypot(dx, dy);
-			p.moveTo(x1 - (dx / len) * cornerRadius, y1 - (dy / len) * cornerRadius);
-		}
-		p.arcTo(x1, y1, x2, y2, cornerRadius);
-	}
-	p.closePath();
-	return p;
+	return robuxLogoImage;
 }
 
-function roundedRectPath(cx, cy, w, h, radius) {
-	const x = cx - w / 2;
-	const y = cy - h / 2;
-	const p = new Path2D();
-	p.moveTo(x + radius, y);
-	p.lineTo(x + w - radius, y);
-	p.arcTo(x + w, y, x + w, y + radius, radius);
-	p.lineTo(x + w, y + h - radius);
-	p.arcTo(x + w, y + h, x + w - radius, y + h, radius);
-	p.lineTo(x + radius, y + h);
-	p.arcTo(x, y + h, x, y + h - radius, radius);
-	p.lineTo(x, y + radius);
-	p.arcTo(x, y, x + radius, y, radius);
-	p.closePath();
-	return p;
-}
+// Draws logorobux.png tinted to match the tier color, using
+// source-atop compositing so the recolor only affects the
+// logo's existing alpha shape (transparent stays transparent).
+async function drawRobuxIcon(ctx, cx, cy, size, color) {
+	const img = await getRobuxLogoImage();
 
-function drawRobuxIcon(ctx, cx, cy, size, color) {
-	ctx.save();
+	const x = cx - size / 2;
+	const y = cy - size / 2;
 
-	const outerR = size / 2;
-	const outerCornerRadius = size * 0.15;
+	const off = createCanvas(size, size);
+	const offCtx = off.getContext('2d');
 
-	// Ring pulled in closer to the outer hex edge, and made thicker/chunkier
-	const ringOuterSize = size * 0.8;
-	const ringThickness = size * 0.24;
-	const ringCornerRadius = ringOuterSize * 0.26;
+	// 1. Draw the original logo image onto the offscreen canvas.
+	offCtx.drawImage(img, 0, 0, size, size);
 
-	const holeSize = size * 0.14;
-	const holeCornerRadius = holeSize * 0.22;
+	// 2. Fill with the tier color using source-atop so only pixels
+	//    where the logo has alpha get colored, preserving shape/edges.
+	offCtx.globalCompositeOperation = 'source-atop';
+	offCtx.fillStyle = color;
+	offCtx.fillRect(0, 0, size, size);
 
-	// Outer rounded hexagon (solid).
-	const outerHex = roundedHexPath(cx, cy, outerR, outerCornerRadius);
-	ctx.fillStyle = color;
-	ctx.fill(outerHex);
-
-	// Cut out the middle, leaving just a THIN hex border before the ring.
-	const innerCutHex = roundedHexPath(cx, cy, outerR - size * 0.035, outerCornerRadius * 0.75);
-	ctx.save();
-	ctx.globalCompositeOperation = 'destination-out';
-	ctx.fill(innerCutHex);
-	ctx.restore();
-
-	// Re-fill the rounded-square ring (outer part).
-	const ringOuter = roundedRectPath(cx, cy, ringOuterSize, ringOuterSize, ringCornerRadius);
-	ctx.fillStyle = color;
-	ctx.fill(ringOuter);
-
-	// Punch the ring's hole so it reads as a thick frame.
-	const ringInnerSize = ringOuterSize - ringThickness * 2;
-	const ringInner = roundedRectPath(cx, cy, ringInnerSize, ringInnerSize, ringCornerRadius * (ringInnerSize / ringOuterSize));
-	ctx.save();
-	ctx.globalCompositeOperation = 'destination-out';
-	ctx.fill(ringInner);
-	ctx.restore();
-
-	// Solid center square.
-	const centerSquare = roundedRectPath(cx, cy, holeSize, holeSize, holeCornerRadius);
-	ctx.fillStyle = color;
-	ctx.fill(centerSquare);
-
-	// Outline.
-	ctx.lineWidth = size * 0.045;
-	ctx.strokeStyle = OUTLINE_COLOR;
-	ctx.stroke(outerHex);
-
-	ctx.restore();
+	// 3. Composite the tinted result onto the main canvas.
+	ctx.drawImage(off, x, y, size, size);
 }
 
 async function renderDonationImage({ donatorName, donatorUserId, raiserName, raiserUserId, amount }) {
@@ -255,7 +194,7 @@ async function renderDonationImage({ donatorName, donatorUserId, raiserName, rai
 	const rowWidth = iconSize + 20 + amountWidth;
 	const rowStartX = CENTER_X - rowWidth / 2;
 
-	drawRobuxIcon(ctx, rowStartX + iconSize / 2, 150, iconSize, tier.color);
+	await drawRobuxIcon(ctx, rowStartX + iconSize / 2, 150, iconSize, tier.color);
 	drawOutlinedText(ctx, amountText, rowStartX + iconSize + 20 + amountWidth / 2, 150, tier.color, 124, 'center');
 
 	drawOutlinedText(ctx, 'donated to', CENTER_X, 268, '#FFFFFF', 92);
