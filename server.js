@@ -71,20 +71,29 @@ function shadeColor(hex, percent) {
 	return `rgb(${r}, ${g}, ${b})`;
 }
 
-// Radial glow from the bottom center, transparent at edges, strength scaled per tier.
-// 100 tier has gradientStrength 0, so it's fully transparent (no gradient).
+// Radial glow anchored at the bottom-center EDGE of the canvas (y = HEIGHT,
+// not below it), transparent toward the top. Strength AND spread both scale
+// per tier: 1000 gets a small, subtle glow that barely reaches the avatars
+// (like reference image 1), while 10000+ gets a big, intense glow that
+// washes most of the banner (like reference image 2).
 function drawBackground(ctx, tier) {
 	if (tier.gradientStrength === 0) {
 		return;
 	}
 
+	const alpha = tier.gradientStrength; // 0.5 for 1000, 1.0 for 10000+
+
+	// Radius scales with tier strength: bigger amounts = bigger, more
+	// intense glow. At alpha=0.5 -> ~0.62*WIDTH, at alpha=1.0 -> ~0.8*WIDTH.
+	const radius = WIDTH * (0.45 + 0.35 * alpha);
+
 	const gradient = ctx.createRadialGradient(
-		CENTER_X, HEIGHT * 1.1, 0,
-		CENTER_X, HEIGHT * 1.1, WIDTH * 0.55
+		CENTER_X, HEIGHT, 0,
+		CENTER_X, HEIGHT, radius
 	);
-	const alpha = tier.gradientStrength;
-	gradient.addColorStop(0, hexToRgba(tier.color, 0.85 * alpha));
-	gradient.addColorStop(0.5, hexToRgba(tier.color, 0.4 * alpha));
+	gradient.addColorStop(0, hexToRgba(tier.color, 0.95 * alpha));
+	gradient.addColorStop(0.35, hexToRgba(tier.color, 0.65 * alpha));
+	gradient.addColorStop(0.7, hexToRgba(tier.color, 0.25 * alpha));
 	gradient.addColorStop(1, 'rgba(0,0,0,0)');
 
 	ctx.fillStyle = gradient;
